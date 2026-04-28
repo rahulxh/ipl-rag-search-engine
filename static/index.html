@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IPL RAG Search Engine</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --ipl-gold: #F7C948;
+    --ipl-blue: #0A2E6E;
+    --ipl-red: #D42C32;
+    --surface: #0D1B2A;
+    --surface2: #152236;
+    --surface3: #1C2E45;
+    --text: #F0EDE6;
+    --text-muted: #8A9BB0;
+    --border: rgba(247,201,72,0.15);
+    --radius: 12px;
+  }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--surface);
+    color: var(--text);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ── Header ── */
+  header {
+    background: linear-gradient(135deg, var(--ipl-blue) 0%, #0D1B2A 100%);
+    border-bottom: 1px solid var(--border);
+    padding: 1.5rem 2rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .logo-badge {
+    background: var(--ipl-gold);
+    color: var(--ipl-blue);
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.1rem;
+    letter-spacing: 0.05em;
+    padding: 0.35rem 0.75rem;
+    border-radius: 6px;
+  }
+
+  header h1 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.8rem;
+    letter-spacing: 0.08em;
+    color: var(--text);
+  }
+
+  header p {
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    margin-top: 0.15rem;
+  }
+
+  .header-right {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .stat-pill {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.78rem;
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+
+  .stat-pill span { color: var(--ipl-gold); font-weight: 600; }
+
+  /* ── Main layout ── */
+  main {
+    flex: 1;
+    max-width: 920px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 2.5rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+
+  /* ── Search bar ── */
+  .search-wrap {
+    position: relative;
+  }
+
+  .search-icon {
+    position: absolute;
+    left: 1.1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-muted);
+    font-size: 1.2rem;
+    pointer-events: none;
+  }
+
+  #search-input {
+    width: 100%;
+    background: var(--surface2);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 1.05rem;
+    padding: 1rem 1rem 1rem 3.2rem;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  #search-input:focus { border-color: var(--ipl-gold); }
+  #search-input::placeholder { color: var(--text-muted); }
+
+  #search-btn {
+    position: absolute;
+    right: 0.5rem;
+    top: 50%;
+    transform: translateY(-50%);
+    background: var(--ipl-gold);
+    color: var(--ipl-blue);
+    border: none;
+    border-radius: 8px;
+    font-family: 'DM Sans', sans-serif;
+    font-weight: 600;
+    font-size: 0.9rem;
+    padding: 0.55rem 1.3rem;
+    cursor: pointer;
+    transition: opacity 0.15s, transform 0.1s;
+  }
+
+  #search-btn:hover { opacity: 0.9; }
+  #search-btn:active { transform: translateY(-50%) scale(0.97); }
+  #search-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  /* ── Quick chips ── */
+  .chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .chip {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 0.3rem 0.85rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .chip:hover {
+    border-color: var(--ipl-gold);
+    color: var(--ipl-gold);
+    background: rgba(247,201,72,0.07);
+  }
+
+  /* ── Answer card ── */
+  .answer-card {
+    background: var(--surface2);
+    border: 1px solid rgba(247,201,72,0.25);
+    border-radius: var(--radius);
+    overflow: hidden;
+    animation: fadeIn 0.3s ease;
+  }
+
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; } }
+
+  .answer-header {
+    background: rgba(247,201,72,0.08);
+    border-bottom: 1px solid var(--border);
+    padding: 0.75rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.82rem;
+    color: var(--ipl-gold);
+    font-weight: 500;
+  }
+
+  .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--ipl-gold); display: inline-block; }
+
+  .answer-body {
+    padding: 1.25rem 1.5rem;
+    font-size: 0.97rem;
+    line-height: 1.75;
+    color: var(--text);
+    white-space: pre-wrap;
+  }
+
+  /* ── Sources ── */
+  .sources-section {
+    padding: 0 1.5rem 1.25rem;
+    border-top: 1px solid var(--border);
+    margin-top: 0.25rem;
+  }
+
+  .sources-title {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    padding: 0.9rem 0 0.5rem;
+    font-weight: 600;
+  }
+
+  .source-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .source-item {
+    background: var(--surface3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.65rem 1rem;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .source-badge {
+    background: rgba(247,201,72,0.12);
+    color: var(--ipl-gold);
+    border: 1px solid rgba(247,201,72,0.2);
+    border-radius: 4px;
+    font-size: 0.68rem;
+    padding: 0.15rem 0.45rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+
+  .source-text {
+    font-size: 0.83rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+    flex: 1;
+  }
+
+  .score-bar {
+    width: 40px;
+    text-align: right;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    white-space: nowrap;
+    margin-top: 2px;
+  }
+
+  /* ── Loading ── */
+  .loading-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    padding: 1.5rem;
+    color: var(--text-muted);
+    font-size: 0.92rem;
+  }
+
+  .spinner {
+    width: 20px; height: 20px;
+    border: 2px solid var(--surface3);
+    border-top-color: var(--ipl-gold);
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: var(--text-muted);
+  }
+
+  .empty-icon {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+  }
+
+  .empty-state h2 {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 1.6rem;
+    letter-spacing: 0.08em;
+    color: var(--text);
+    margin-bottom: 0.5rem;
+  }
+
+  /* ── Error ── */
+  .error-card {
+    background: rgba(212,44,50,0.1);
+    border: 1px solid rgba(212,44,50,0.3);
+    border-radius: var(--radius);
+    padding: 1rem 1.25rem;
+    color: #F08080;
+    font-size: 0.9rem;
+  }
+
+  /* ── Footer ── */
+  footer {
+    text-align: center;
+    padding: 1.5rem;
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    border-top: 1px solid var(--border);
+  }
+
+  footer a { color: var(--ipl-gold); text-decoration: none; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo-badge">IPL</div>
+  <div>
+    <h1>RAG Search Engine</h1>
+    <p>Retrieval-Augmented Generation · Powered by ChromaDB + Claude</p>
+  </div>
+  <div class="header-right">
+    <div class="stat-pill" id="doc-count">Docs: <span>—</span></div>
+    <div class="stat-pill">Model: <span>Sonnet 4</span></div>
+  </div>
+</header>
+
+<main>
+
+  <!-- Search -->
+  <div class="search-wrap">
+    <span class="search-icon">🔍</span>
+    <input
+      id="search-input"
+      type="text"
+      placeholder="Ask anything about IPL... e.g. Who has the most IPL titles?"
+      autocomplete="off"
+    >
+    <button id="search-btn">Search ↗</button>
+  </div>
+
+  <!-- Quick-question chips -->
+  <div class="chips" id="chips">
+    <div class="chip">Most IPL titles?</div>
+    <div class="chip">Virat Kohli's records</div>
+    <div class="chip">Orange Cap winners</div>
+    <div class="chip">What is the IPL format?</div>
+    <div class="chip">Who owns KKR?</div>
+    <div class="chip">Highest score in IPL?</div>
+    <div class="chip">CSK captain</div>
+    <div class="chip">Rashid Khan team</div>
+  </div>
+
+  <!-- Results area -->
+  <div id="results"></div>
+
+</main>
+
+<footer>
+  IPL RAG Search Engine &nbsp;·&nbsp;
+  Built with <a href="https://www.trychroma.com/" target="_blank">ChromaDB</a>,
+  <a href="https://www.sbert.net/" target="_blank">sentence-transformers</a> &
+  <a href="https://www.anthropic.com/" target="_blank"></a>
+</footer>
+
+<script>
+const input = document.getElementById('search-input');
+const btn = document.getElementById('search-btn');
+const results = document.getElementById('results');
+
+// Load stats
+fetch('/stats').then(r => r.json()).then(d => {
+  document.querySelector('#doc-count span').textContent = d.total_documents;
+}).catch(() => {});
+
+// Chips
+document.getElementById('chips').addEventListener('click', e => {
+  const chip = e.target.closest('.chip');
+  if (chip) {
+    input.value = chip.textContent.trim();
+    doSearch();
+  }
+});
+
+// Search on Enter
+input.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+btn.addEventListener('click', doSearch);
+
+async function doSearch() {
+  const query = input.value.trim();
+  if (!query) return;
+
+  btn.disabled = true;
+  results.innerHTML = `
+    <div class="loading-wrap">
+      <div class="spinner"></div>
+      <span>Retrieving relevant chunks and generating answer...</span>
+    </div>`;
+
+  try {
+    const res = await fetch('/search', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ query, top_k: 5 })
+    });
+
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.detail || 'Server error');
+    }
+
+    const data = await res.json();
+    renderAnswer(data);
+  } catch (err) {
+    results.innerHTML = `<div class="error-card">⚠️ ${err.message || 'Something went wrong. Is the server running?'}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderAnswer(data) {
+  const sourcesHtml = data.sources.map(s => `
+    <div class="source-item">
+      <span class="source-badge">${s.category}</span>
+      <span class="source-text">${escHtml(s.text)}</span>
+      <span class="score-bar">${(s.relevance_score * 100).toFixed(0)}%</span>
+    </div>
+  `).join('');
+
+  results.innerHTML = `
+    <div class="answer-card">
+      <div class="answer-header">
+        <div class="dot"></div>
+        Answer &nbsp;·&nbsp; Query: "${escHtml(data.query)}"
+        &nbsp;·&nbsp; Searched ${data.total_chunks_searched} chunks
+      </div>
+      <div class="answer-body">${escHtml(data.answer)}</div>
+      <div class="sources-section">
+        <div class="sources-title">Retrieved Sources</div>
+        <div class="source-list">${sourcesHtml}</div>
+      </div>
+    </div>`;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

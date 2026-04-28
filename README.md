@@ -1,6 +1,6 @@
 # 🏏 IPL RAG Search Engine
 
-Ask anything about IPL — powered by **ChromaDB + sentence-transformers + Claude**.
+Ask anything about IPL — powered by **ChromaDB + sentence-transformers **.
 
 ## Architecture
 
